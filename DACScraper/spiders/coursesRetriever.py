@@ -62,7 +62,25 @@ class CoursesretrieverSpider(scrapy.Spider):
             item['syllabus'] = s.strip()
             req = re.findall(REGEX_PRE_REQ, c)
             if req:
-                item['requirement'] = req[0].strip()
+                item['requirement'] = self.processPreReqs(req[0].strip())
             else:
                 item['requirement'] = None
             yield item
+
+    def processPreReqs(self, reqsString):
+        """
+        Returns a list of lists containing the
+        necessary pre-requisites for each course
+        """
+        if (not reqsString):
+            pass
+
+        reqsList = []
+
+        # multiple pre-requisites
+        if ("/" in reqsString):
+            for reqs in reqsString.split("/"):
+                reqsList.append(reqs.split())
+        else:
+            reqsList.append(reqsString.split())
+        return reqsList
