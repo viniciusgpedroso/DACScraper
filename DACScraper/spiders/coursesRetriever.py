@@ -15,19 +15,24 @@ REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
 REGEX_PRE_REQ = '<strong>Pré-Req.: <\/strong>(.*)<br>'
 REGEX_SYLLABUS = '<strong>Ementa: .*?>(.*?)(<\/p>|<br>)'
 REGEX_CODE = '(OF.*?)<br>'
+REGEX_TITLE = '- (.*)'
+REGEX_ID = '([A-Z]{2}[0-9]{1,3}|[A-Z] [0-9]{1,3})'
+
+# Constants
+ID_SIZE = 5
 
 class CoursesretrieverSpider(scrapy.Spider):
     name = 'coursesRetriever'
 
-    # file:///home/endsieg/Documents/MCsUnicamp.html
     # http://https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0032/0032.html#MA044/
-    sample_urls = ['file:///home/endsieg/Documents/MCsUnicamp.html']
+    sample_urls = []
 
     def __init__(self, urls=sample_urls, filename='', **kwargs):
         if (len(urls) == 0):
             logging.info(f"Loading '{filename}'")
             f = open(filename)
-            urls = json.loads(f.read())
+            data = json.loads(f.read())
+            urls = data['urls']
             f.close()
         
         self.urls = urls
@@ -37,8 +42,7 @@ class CoursesretrieverSpider(scrapy.Spider):
         for url in self.urls:
             item = CourseItem()
             
-            item['year'] = re.findall(REGEX_CATALOG_YEAR, url)[0]
-            #item['year'] = '2018' 
+            item['year'] = re.findall(REGEX_CATALOG_YEAR, url)[0] 
             
             request = scrapy.Request(url, callback=self.parse)
             request.meta['item'] = item
@@ -52,8 +56,9 @@ class CoursesretrieverSpider(scrapy.Spider):
         syllabus = response.xpath(XPATH_SYLLABUS).getall()
 
         for t, c, s in zip(titles, codes, syllabus):
-            item['title'] = t.strip()
-            item['codes'] = re.findall(REGEX_CODE, c)[0]
+            item['id'] = re.findall(REGEX_ID, t)[0]
+            item['title'] = re.findall(REGEX_TITLE, t)[0].strip()
+            item['codes'] = re.findall(REGEX_CODE, c)[0].strip()
             item['syllabus'] = s.strip()
             req = re.findall(REGEX_PRE_REQ, c)
             if req:

@@ -13,6 +13,7 @@ class DacscraperItem(scrapy.Item):
     pass
 
 class CourseItem(scrapy.Item):
+    id = scrapy.Field()
     title = scrapy.Field()
     year = scrapy.Field()
     requirement = scrapy.Field()
