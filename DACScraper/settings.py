@@ -91,3 +91,6 @@ ROBOTSTXT_OBEY = False
 
 # Decode latin characters
 FEED_EXPORT_ENCODING = 'utf-8'
+
+# Store data
+FILES_STORE = '.scrapy'
