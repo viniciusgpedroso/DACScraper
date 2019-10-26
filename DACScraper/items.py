@@ -7,11 +7,14 @@
 
 import scrapy
 
-
 class DacscraperItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    pass
+
+class CourseItem(scrapy.Item):
     title = scrapy.Field()
+    year = scrapy.Field()
     requirement = scrapy.Field()
     syllabus = scrapy.Field()
     codes = scrapy.Field()
