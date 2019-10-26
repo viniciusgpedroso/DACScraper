@@ -19,3 +19,6 @@ class CourseItem(scrapy.Item):
     requirement = scrapy.Field()
     syllabus = scrapy.Field()
     codes = scrapy.Field()
+
+class CourseIdURLItem(scrapy.Item):
+    url = scrapy.Field()
