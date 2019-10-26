@@ -73,6 +73,7 @@ class CoursesretrieverSpider(scrapy.Spider):
         necessary pre-requisites for each course
         """
         if (not reqsString):
+            logging.info("Empty pre-requisites string")
             pass
 
         reqsList = []
