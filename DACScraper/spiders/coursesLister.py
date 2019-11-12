@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import scrapy
+from DACScraper.items import CourseIdURLItem
 
 # XPATHS
 XPATH_IDS = '//div[@class="div10b"]//@href'

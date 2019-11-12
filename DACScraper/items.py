@@ -22,3 +22,4 @@ class CourseItem(scrapy.Item):
 
 class CourseIdURLItem(scrapy.Item):
     url = scrapy.Field()
+    year = scrapy.Field()
