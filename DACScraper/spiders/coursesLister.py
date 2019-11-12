@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import scrapy
 
-xp = '//div[@class="div10b"]//@href'
+# XPATHS
+XPATH_IDS = '//div[@class="div10b"]//@href'
 
 class CourseslisterSpider(scrapy.Spider):
     name = 'coursesLister'
