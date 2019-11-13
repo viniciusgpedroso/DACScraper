@@ -54,3 +54,7 @@ class CourseslisterSpider(scrapy.Spider):
     def parse(self, response):
         # TODO parse results
         item = response.meta['item']
+        relative_url = response.xpath(XPATH_IDS).get()
+        url = response.urljoin(relative_url)
+        item['url'] = url
+        yield item
