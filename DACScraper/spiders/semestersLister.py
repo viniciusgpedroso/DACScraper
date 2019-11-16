@@ -44,3 +44,7 @@ class SemesterslisterSpider(scrapy.Spider):
             urls.append(prefix + str(i) + suffix)
         
         return urls
+    
+    def start_requests(self):
+        for url in self.urls:
+            yield scrapy.Request(url, callback=self.continue_requests)
