@@ -45,14 +45,14 @@ class CourseslisterSpider(scrapy.Spider):
         """
         for relative_url in response.xpath(XPATH_IDS).getall():
             item = CourseIdURLItem()
-            item['year'] = re.findall(REGEX_CATALOG_YEAR, url)[0]
+            item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
             url = response.urljoin(relative_url)
             request = scrapy.Request(url, callback=self.parse)
             request.meta['item'] = item
             yield request
     
     def parse(self, response):
-        # TODO parse results
+        
         item = response.meta['item']
         relative_url = response.xpath(XPATH_IDS).get()
         url = response.urljoin(relative_url)
