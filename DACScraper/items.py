@@ -27,3 +27,11 @@ class CourseIdURLItem(scrapy.Item):
 class CourseListItem(scrapy.Item):
     year = scrapy.Field()
     courses_list = scrapy.Field()
+
+class SemestersItem(scrapy.Item):
+    code = scrapy.Field()
+    emphasis = scrapy.Field()
+    year = scrapy.Field()
+    name = scrapy.Field()
+    semesters = scrapy.Field()
+    text_electives = scrapy.Field()
