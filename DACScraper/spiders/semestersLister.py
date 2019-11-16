@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 import scrapy
+import re
+import logging
+from DACScraper.items import CourseListItem
 
+# REGEX
+REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
+
+# XPATH
+XPATH_COURSE_CODE = '//div[@class="texto"]//span/text()'
 
 # Constants
 FIRST_YEAR = "2012" # Previous catalogs do not have the same structure
 
 class SemesterslisterSpider(scrapy.Spider):
     name = 'semestersLister'
-    sample_urls = ['http://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2012/cursos.html/']
 
-    def __init__(self, last_year="2012", **kwargs):
+    def __init__(self, last_year="2020", **kwargs):
         """
         Initializes from sample_urls if not empty 
         or reads from json file with structure
         """
         self.urls = self.build_urls(FIRST_YEAR, last_year)
-
-    def parse(self, response):
-        pass
 
     def build_urls(self, first_year, last_year):
         """Build urls from first year to last year (inclusive)
@@ -30,9 +34,8 @@ class SemesterslisterSpider(scrapy.Spider):
             if last_year < first_year, returns an empty list
             else, a list with catalog urls from first year to last year
         """
-
-        prefix = "http://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo"
-        suffix = "/cursos.html/"
+        prefix = "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo"
+        suffix = "/cursos.html"
 
         last = int(last_year)
         first = int(first_year)
@@ -40,11 +43,23 @@ class SemesterslisterSpider(scrapy.Spider):
             return []
         
         urls = []
-        for i in range(first_year, last_year + 1):
+        for i in range(first, last + 1):
             urls.append(prefix + str(i) + suffix)
         
         return urls
     
     def start_requests(self):
         for url in self.urls:
-            yield scrapy.Request(url, callback=self.continue_requests)
+            yield scrapy.Request(url, callback=self.parse)
+    
+    def parse(self, response):
+        item = CourseListItem()
+        item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
+
+        courses_list = []
+        courses_codes = response.xpath(XPATH_COURSE_CODE).getall()
+        for i in range(len(courses_codes)):
+            courses_list.append(int(courses_codes[i]))
+        courses_list.sort()
+        item['courses_list'] = courses_list
+        yield item
