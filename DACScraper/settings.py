@@ -64,9 +64,9 @@ DOWNLOAD_DELAY = 10
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    'DACScraper.pipelines.DacscraperPipeline': 300,
-#}
+ITEM_PIPELINES = {
+    'DACScraper.pipelines.MySQLPipeline': 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

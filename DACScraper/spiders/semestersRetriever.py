@@ -25,16 +25,15 @@ FIRST_SEMESTER_ALT = "01� Semestre"
 
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
-    #sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2018/proposta/sug34.html']
+    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html']
+    '''
     sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug48catalogo2013.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug108catalogo2017.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug11catalogo2018.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug12catalogo2018.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug34catalogo2018.html']
-
-    # 'https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2018/proposta/sug11.html'
-
+    '''
     def __init__(self, urls=sample_urls, filename=None, **kwargs):
         
         if filename:

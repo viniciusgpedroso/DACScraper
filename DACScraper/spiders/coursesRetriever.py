@@ -23,7 +23,7 @@ class CoursesretrieverSpider(scrapy.Spider):
     name = 'coursesRetriever'
 
     # http://https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0032/0032.html#MA044/
-    sample_urls = ["file:///home/endsieg/Documents/MCsUnicampcatalogo2018.html"]
+    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0023/0023.html"]
 
     def __init__(self, urls=sample_urls, filename='', **kwargs):
         if (len(urls) == 0):
@@ -58,8 +58,7 @@ class CoursesretrieverSpider(scrapy.Spider):
             codes = selector.xpath(XPATH_CODES).get()
             syllabus = selector.xpath(XPATH_SYLLABUS).get()
             
-            logging.info("title: " + str(type(title)))
-            item['id'] = re.findall(REGEX_ID, title)[0]
+            item['id'] = re.findall(REGEX_ID, title)[0] + "_" + str(item['year'])
             item['title'] = re.findall(REGEX_TITLE, title)[0].strip()
             item['codes'] = re.findall(REGEX_CODE, codes)[0].strip()
             item['syllabus'] = syllabus.strip()
