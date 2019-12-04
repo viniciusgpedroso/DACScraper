@@ -10,6 +10,9 @@ XPATH_COURSE = "//h2[contains(text(), 'Curso')]/text()"
 XPATH_EMPHASIS = "//h1/text()"
 XPATH_SEMESTER = '//div[@class="div100"]//a[contains(text(), "(")]/text() | //div[@class="div100"]//text()[contains(., "Semestre")]'
 XPATH_SEMESTER += ' | //div[@class="div100"]//text()[contains(., "eletivos")]'
+XPATH_ELECTIVES = '//strong[contains(text(),"Disciplinas Eletivas")]'
+XPATH_ELECTIVES_DATA = '//following-sibling::br//following-sibling::text()[contains(.,"dentre")]'
+XPATH_SUBJECTS = '/following-sibling::div//div[@class="div50b"]/a/text()'
 # REGEX
 REGEX_EMPHASIS_DETECTOR = "([A-Z]{1,3}) -"
 REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
@@ -22,6 +25,7 @@ REGEX_REMOVE_PARENTHESES = r'\([^)]*\)'
 # Constansts
 FIRST_SEMESTER = "01° Semestre"
 FIRST_SEMESTER_ALT = "01� Semestre"
+ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
@@ -34,6 +38,7 @@ class SemestersretrieverSpider(scrapy.Spider):
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug12catalogo2018.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug34catalogo2018.html']
     '''
+    
     def __init__(self, urls=sample_urls, filename=None, **kwargs):
         
         if filename:
@@ -47,6 +52,7 @@ class SemestersretrieverSpider(scrapy.Spider):
         else:
             urls = self.sample_urls
         
+        self.text_electives = []
         self.urls = urls
 
     def build_proposal_urls(self, courses_list):
@@ -74,6 +80,7 @@ class SemestersretrieverSpider(scrapy.Spider):
 
     def start_requests(self):
         print("Empty start requests")
+        # TODO deal with scrapy asynchronous behavior when gettins electives text
         for url in self.urls:
             yield scrapy.Request(url, callback=self.parse)
 
@@ -116,19 +123,67 @@ class SemestersretrieverSpider(scrapy.Spider):
         assert len(emphasis_sems) == num_emphasis
         
         print("emphasis_titles: " + str(emphasis_titles))
+        
+        course_code = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
+        course_year = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
+        # Gets electives for all emphasis
+        yield from self.get_electives_texts(course_code, course_year)
+        print("lst: " + str(self.text_electives))
+
         # Builds an item for each emphasis
         for i in range(num_emphasis): 
             item = SemestersItem()
-            item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
-            item['code'] = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
+            item['year'] = course_year
+            item['code'] = course_code
             item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
-
             emp_code = re.findall(REGEX_EMPHASIS_DETECTOR, emphasis_titles[i])[0]
             item['id'] = item['code'] + "_" + emp_code + "_" + item['year']
             item['semesters'] = self.build_semesters_dict(emphasis_sems[i])
+            item['text_electives'] = "no"
             yield item
         # TODO make request to gather data about electives
     
+    def get_electives_texts(self, course_code, year):
+        '''Build a list with each course emphasis into self.text_electives
+
+        Args:
+            course_code (python.str): the code of the course (without emphasis)
+            year (python.str): the year of the course
+        '''
+        url_prefix = "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo"
+        url_before_code = "/curriculoPleno/cp"
+        url_after_code = ".html"
+        url = url_prefix + str(year) + url_before_code + str(course_code) + url_after_code
+        yield scrapy.Request(url, callback=self.parse_electives, dont_filter=True)
+
+    def parse_electives(self, response):
+        '''Parses courses electives and adds the data to self.text_electives 
+        #TODO What to return when the course has no electives?
+
+        Args:
+            reponse (scrapy.response): response from the url of the course with
+            the electives text
+        
+        Returns:
+            (python.list): a list with each emphasis text or None if the course has no emphasis
+        '''
+        xpath_electives_text = XPATH_ELECTIVES + "/text()"
+        xpath_electives = xpath_electives_text + " | " + XPATH_ELECTIVES + XPATH_ELECTIVES_DATA + " | " + XPATH_ELECTIVES + XPATH_SUBJECTS
+
+        electives_list = response.xpath(xpath_electives).getall()
+
+        split_indexes = []
+        for i in range(len(electives_list)):
+            if ELECTIVES_DETECTOR in electives_list[i]:
+                split_indexes.append(i)
+            if '---' in electives_list[i]:
+                electives_list[i] = "Qualquer Disciplina da Unicamp"
+            if '\n' in electives_list[i]:
+                electives_list[i] = re.sub('\\n', '', electives_list[i])
+        
+        self.text_electives = [electives_list[i+1:j] for i,j in zip(split_indexes, split_indexes[1:]+[None])]
+        print("self.text_electives " + str(self.text_electives))
+
     def parse_without_emphasis(self, response):
         sems = response.xpath(XPATH_SEMESTER).getall()
         item = SemestersItem()

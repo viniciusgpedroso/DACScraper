@@ -52,11 +52,11 @@ class MySQLPipeline(object):
             cursor = self.cnx.cursor()
             # Add to table curso
             add_curso = (" "
-               "INSERT INTO curso (idcurso, code, name, year) "
-               "VALUES (%s, %s, %s, %s) "
+               "INSERT INTO curso (idcurso, code, name, year, text_electives) "
+               "VALUES (%s, %s, %s, %s, %s) "
                "ON DUPLICATE KEY UPDATE idcurso=VALUES(idcurso), code=VALUES(code), "
-               "name=VALUES(name), year=VALUES(year)")
-            data_curso = (item['id'], item['code'], item['name'], item['year'])
+               "name=VALUES(name), year=VALUES(year), text_electives=VALUES(text_electives)")
+            data_curso = (item['id'], item['code'], item['name'], item['year'], item['text_electives'])
             cursor.execute(add_curso, data_curso)
             self.cnx.commit()
             # Add to table semestres
@@ -70,7 +70,6 @@ class MySQLPipeline(object):
                     cursor.execute(add_curso, data_curso)
                     self.cnx.commit()
             cursor.close()
-            logging.warning("SemesterItem not implemented in MySQLPipeline")
 
     def close_spider(self, spider):
         self.cnx.close()
