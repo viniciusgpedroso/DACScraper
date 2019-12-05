@@ -9,7 +9,7 @@ from DACScraper.items import CourseItem
 XPATH_PARENT = "//div[@class='ancora']"
 XPATH_TITLE = "self::*//a/text()"
 XPATH_CODES = "self::*//following-sibling::p[1]"
-XPATH_SYLLABUS = "self::*//following-sibling::div[@class='justificado']//p/text()"
+XPATH_SYLLABUS = "self::*//following-sibling::div[@class='justificado']//p/text() | self::*//following-sibling::div[@class='justificado']/text()"
 
 # REGEX
 REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
@@ -23,7 +23,7 @@ class CoursesretrieverSpider(scrapy.Spider):
     name = 'coursesRetriever'
 
     # http://https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0032/0032.html#MA044/
-    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0023/0023.html"]
+    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2015/coordenadorias/0023/0023.html", "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2016/coordenadorias/0023/0023.html", "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2017/coordenadorias/0023/0023.html", "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2018/coordenadorias/0023/0023.html", "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0023/0023.html", "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2020/coordenadorias/0023/0023.html"]
 
     def __init__(self, urls=sample_urls, filename='', **kwargs):
         if (len(urls) == 0):

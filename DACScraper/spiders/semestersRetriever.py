@@ -29,7 +29,7 @@ ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
-    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html']
+    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug28.html']
     text_electives = []
     '''
     sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',
@@ -78,8 +78,6 @@ class SemestersretrieverSpider(scrapy.Spider):
         return urls
 
     def start_requests(self):
-        print("Empty start requests")
-        # TODO deal with scrapy asynchronous behavior when gettins electives text
         # Gets electives for all emphasis
         for url in self.urls:
             course_code = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, url)[0]
@@ -142,7 +140,6 @@ class SemestersretrieverSpider(scrapy.Spider):
             item['semesters'] = self.build_semesters_dict(emphasis_sems[i])
             item['text_electives'] = lst_electives[i]
             yield item
-        # TODO make request to gather data about electives
     
     def get_electives_texts(self, course_code, year):
         '''Build a list with each course emphasis into self.text_electives
@@ -202,6 +199,7 @@ class SemestersretrieverSpider(scrapy.Spider):
         item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
         item['id'] = item['code'] + "_" + item['year']
         item['semesters'] = self.build_semesters_dict(sems)
+        item['text_electives'] = self.text_electives[0]
         yield item
 
     def build_semesters_dict(self, emphasis_sem):

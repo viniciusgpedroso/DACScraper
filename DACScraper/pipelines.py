@@ -44,7 +44,7 @@ class MySQLPipeline(object):
                         cursor.execute(add_reqs, data_reqs)
                     group += 1
             else:
-                data_reqs = (item['id'], 0, None)
+                data_reqs = (0, item['id'], None)
                 cursor.execute(add_reqs, data_reqs)
             self.cnx.commit()
             cursor.close()
