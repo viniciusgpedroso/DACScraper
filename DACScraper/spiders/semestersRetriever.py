@@ -30,6 +30,7 @@ ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
     sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html']
+    text_electives = []
     '''
     sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug48catalogo2013.html',
@@ -51,8 +52,6 @@ class SemestersretrieverSpider(scrapy.Spider):
             f.close()
         else:
             urls = self.sample_urls
-        
-        self.text_electives = []
         self.urls = urls
 
     def build_proposal_urls(self, courses_list):
@@ -81,7 +80,12 @@ class SemestersretrieverSpider(scrapy.Spider):
     def start_requests(self):
         print("Empty start requests")
         # TODO deal with scrapy asynchronous behavior when gettins electives text
+        # Gets electives for all emphasis
         for url in self.urls:
+            course_code = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, url)[0]
+            course_year = re.findall(REGEX_CATALOG_YEAR, url)[0]
+            yield from self.get_electives_texts(course_code, course_year)
+            print("lst: " + str(self.text_electives))
             yield scrapy.Request(url, callback=self.parse)
 
     def parse(self, response):
@@ -124,22 +128,19 @@ class SemestersretrieverSpider(scrapy.Spider):
         
         print("emphasis_titles: " + str(emphasis_titles))
         
-        course_code = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
-        course_year = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
-        # Gets electives for all emphasis
-        yield from self.get_electives_texts(course_code, course_year)
-        print("lst: " + str(self.text_electives))
-
+        lst_electives = self.text_electives
+        print("lst_electives")
+        print(lst_electives)
         # Builds an item for each emphasis
         for i in range(num_emphasis): 
             item = SemestersItem()
-            item['year'] = course_year
-            item['code'] = course_code
+            item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
+            item['code'] = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
             item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
             emp_code = re.findall(REGEX_EMPHASIS_DETECTOR, emphasis_titles[i])[0]
             item['id'] = item['code'] + "_" + emp_code + "_" + item['year']
             item['semesters'] = self.build_semesters_dict(emphasis_sems[i])
-            item['text_electives'] = "no"
+            item['text_electives'] = lst_electives[i]
             yield item
         # TODO make request to gather data about electives
     
@@ -154,7 +155,7 @@ class SemestersretrieverSpider(scrapy.Spider):
         url_before_code = "/curriculoPleno/cp"
         url_after_code = ".html"
         url = url_prefix + str(year) + url_before_code + str(course_code) + url_after_code
-        yield scrapy.Request(url, callback=self.parse_electives, dont_filter=True)
+        yield scrapy.Request(url, priority=900, callback=self.parse_electives, dont_filter=True)
 
     def parse_electives(self, response):
         '''Parses courses electives and adds the data to self.text_electives 
@@ -181,7 +182,16 @@ class SemestersretrieverSpider(scrapy.Spider):
             if '\n' in electives_list[i]:
                 electives_list[i] = re.sub('\\n', '', electives_list[i])
         
-        self.text_electives = [electives_list[i+1:j] for i,j in zip(split_indexes, split_indexes[1:]+[None])]
+        
+        self.text_electives = []
+        lst_electives = [electives_list[i+1:j] for i,j in zip(split_indexes, split_indexes[1:]+[None])]
+        for group in lst_electives:
+            single_text = ""
+            for e in group:
+                single_text += e + "\n"
+            self.text_electives.append(single_text)
+
+
         print("self.text_electives " + str(self.text_electives))
 
     def parse_without_emphasis(self, response):
