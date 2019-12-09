@@ -29,7 +29,7 @@ ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
-    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug28.html']
+    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html']
     text_electives = []
     '''
     sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',

@@ -32,19 +32,20 @@ class MySQLPipeline(object):
             self.cnx.commit()
             # Add to table reqs
             add_reqs = ("INSERT INTO requirements "
-               "(grupo, idmateria, req) "
-               "VALUES (%s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE grupo=VALUES(grupo), idmateria=VALUES(idmateria), req=VALUES(req)")
+               "(grupo, idmateria, req, year) "
+               "VALUES (%s, %s, %s, %s) "
+               "ON DUPLICATE KEY UPDATE grupo=VALUES(grupo), idmateria=VALUES(idmateria), req=VALUES(req), "
+                "year=VALUES(year)")
             reqs = item['requirement']
             if reqs:
                 group = 1
                 for req in reqs:
                     for materia in req:
-                        data_reqs = (group, item['id'], materia)
+                        data_reqs = (group, item['id'], materia, item['year'])
                         cursor.execute(add_reqs, data_reqs)
                     group += 1
             else:
-                data_reqs = (0, item['id'], None)
+                data_reqs = (0, item['id'], "Nenhum", item['year'])
                 cursor.execute(add_reqs, data_reqs)
             self.cnx.commit()
             cursor.close()
