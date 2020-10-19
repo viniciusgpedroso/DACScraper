@@ -11,7 +11,7 @@ REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
 XPATH_COURSE_CODE = '//div[@class="texto"]//span/text()'
 
 # Constants
-FIRST_YEAR = "2012" # Previous catalogs do not have the same structure
+FIRST_YEAR = "2018" # Previous catalogs do not have the same structure
 
 class SemesterslisterSpider(scrapy.Spider):
     name = 'semestersLister'

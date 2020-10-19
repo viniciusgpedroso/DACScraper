@@ -17,23 +17,26 @@ REGEX_PRE_REQ = '<strong>Pré-Req.: <\/strong>(.*)<br>'
 REGEX_SYLLABUS = '<strong>Ementa: .*?>(.*?)(<\/p>|<br>)'
 REGEX_CODE = '(OF.*?)<br>'
 REGEX_TITLE = '- (.*)'
-REGEX_ID = '([A-Z]{2}[0-9]{1,3}|[A-Z] [0-9]{1,3})'
+REGEX_ID = '(\*?[A-Z]{2}[0-9]{1,3}|\*?[A-Z] [0-9]{1,3})'
 
 class CoursesretrieverSpider(scrapy.Spider):
     name = 'coursesRetriever'
 
     # http://https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0032/0032.html#MA044/
-    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0023/0023.html"]
+    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0029/0029.html"]
 
-    def __init__(self, urls=sample_urls, filename='', **kwargs):
-        if (len(urls) == 0):
+    def __init__(self, urls=sample_urls, filename=None, **kwargs):
+        if filename:
             logging.info(f"Loading '{filename}'")
             f = open(filename)
             data = json.loads(f.read())
-            urls = data['urls']
             f.close()
-        
-        self.urls = urls
+            data_urls = []
+            for t in data:
+                data_urls.append(t['url'])
+            self.urls=data_urls
+        else:
+            self.urls = urls
 
     def start_requests(self):
 
@@ -62,6 +65,7 @@ class CoursesretrieverSpider(scrapy.Spider):
             item['title'] = re.findall(REGEX_TITLE, title)[0].strip()
             item['codes'] = re.findall(REGEX_CODE, codes)[0].strip()
             item['syllabus'] = syllabus.strip()
+            item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
             req = re.findall(REGEX_PRE_REQ, codes)
             if req:
                 item['requirement'] = self.processPreReqs(req[0].strip())
@@ -83,7 +87,8 @@ class CoursesretrieverSpider(scrapy.Spider):
         # multiple pre-requisites
         if ("/" in reqsString):
             for reqs in reqsString.split("/"):
-                reqsList.append(reqs.split())
+                reqsList.append(re.findall(REGEX_ID, reqs))
+
         else:
-            reqsList.append(reqsString.split())
+            reqsList.append(re.findall(REGEX_ID, reqsString))
         return reqsList

@@ -29,7 +29,7 @@ ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
-    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html']
+    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html', 'https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug11.html']
     text_electives = []
     '''
     sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',
@@ -82,9 +82,7 @@ class SemestersretrieverSpider(scrapy.Spider):
         for url in self.urls:
             course_code = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, url)[0]
             course_year = re.findall(REGEX_CATALOG_YEAR, url)[0]
-            yield from self.get_electives_texts(course_code, course_year)
-            print("lst: " + str(self.text_electives))
-            yield scrapy.Request(url, callback=self.parse)
+            yield scrapy.Request(url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
         # Checks if the course has multiple emphasis
@@ -136,12 +134,13 @@ class SemestersretrieverSpider(scrapy.Spider):
             item['code'] = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
             item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
             emp_code = re.findall(REGEX_EMPHASIS_DETECTOR, emphasis_titles[i])[0]
+            item['emphasis'] = emp_code
             item['id'] = item['code'] + "_" + emp_code + "_" + item['year']
             item['semesters'] = self.build_semesters_dict(emphasis_sems[i])
-            item['text_electives'] = lst_electives[i]
-            yield item
+            electives_url = self.get_electives_url(item['code'], item['year'])
+            yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': i}, dont_filter=True)
     
-    def get_electives_texts(self, course_code, year):
+    def get_electives_url(self, course_code, year):
         '''Build a list with each course emphasis into self.text_electives
 
         Args:
@@ -152,7 +151,7 @@ class SemestersretrieverSpider(scrapy.Spider):
         url_before_code = "/curriculoPleno/cp"
         url_after_code = ".html"
         url = url_prefix + str(year) + url_before_code + str(course_code) + url_after_code
-        yield scrapy.Request(url, priority=900, callback=self.parse_electives, dont_filter=True)
+        return url
 
     def parse_electives(self, response):
         '''Parses courses electives and adds the data to self.text_electives 
@@ -180,16 +179,19 @@ class SemestersretrieverSpider(scrapy.Spider):
                 electives_list[i] = re.sub('\\n', '', electives_list[i])
         
         
-        self.text_electives = []
+        text_electives = []
         lst_electives = [electives_list[i+1:j] for i,j in zip(split_indexes, split_indexes[1:]+[None])]
         for group in lst_electives:
             single_text = ""
             for e in group:
                 single_text += e + "\n"
-            self.text_electives.append(single_text)
+            text_electives.append(single_text)
 
+        item = response.meta['item']
+        emp_ind = int(response.meta['emp_index'])
 
-        print("self.text_electives " + str(self.text_electives))
+        item['text_electives'] = text_electives[emp_ind]
+        yield item
 
     def parse_without_emphasis(self, response):
         sems = response.xpath(XPATH_SEMESTER).getall()
@@ -199,8 +201,9 @@ class SemestersretrieverSpider(scrapy.Spider):
         item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
         item['id'] = item['code'] + "_" + item['year']
         item['semesters'] = self.build_semesters_dict(sems)
-        item['text_electives'] = self.text_electives[0]
-        yield item
+        item['emphasis'] = ""
+        electives_url = self.get_electives_url(item['code'], item['year'])
+        yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': 0}, dont_filter=True)
 
     def build_semesters_dict(self, emphasis_sem):
         semesters = []
