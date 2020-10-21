@@ -7,30 +7,32 @@ from DACScraper.items import CourseItem
 import DACScraper.constants as cnst
 
 
-class CoursesretrieverSpider(scrapy.Spider):
+class CoursesRetrieverSpider(scrapy.Spider):
+    """
+    Spider to retrieve info about courses and add to a 'CourseItem'
+    """
     name = 'coursesRetriever'
 
-    # http://https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0032/0032.html#MA044/
-    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/coordenadorias/0034/0034.html"]
-
-    def __init__(self, urls=sample_urls, filename=None, **kwargs):
-        if filename:
-            logging.info(f"Loading '{filename}'")
-            f = open(filename)
-            data = json.loads(f.read())
-            f.close()
-            data_urls = []
-            for t in data:
-                data_urls.append(t['url'])
-            self.urls=data_urls
-        else:
-            self.urls = urls
+    def __init__(self, filename=None):
+        """
+        Reads the urls from the filename
+        :param filename: location of json file with an array of objects with 'url' and 'year' fields.
+        """
+        logging.info(f"Loading '{filename}'")
+        f = open(filename)
+        data = json.loads(f.read())
+        f.close()
+        self.urls = []
+        for t in data:
+            self.urls.append(t['url'])
 
     def start_requests(self):
-
+        """
+        Starts requests using the urls from 'self.urls' list.
+        :return: scrapy.http.requests to be parsed
+        """
         for url in self.urls:
             item = CourseItem()
-            
             item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, url)[0]
             
             request = scrapy.Request(url, callback=self.parse)
@@ -38,6 +40,11 @@ class CoursesretrieverSpider(scrapy.Spider):
             yield request
 
     def parse(self, response):
+        """
+        Parses the response and yields CourseItem objects
+        :param response: scrapy.http.response objects
+        :return: filled CourseItem object
+        """
         item = response.meta['item']
 
         parents_selectors = response.xpath(cnst.XPATH_PARENT)
@@ -53,30 +60,31 @@ class CoursesretrieverSpider(scrapy.Spider):
             item['title'] = re.findall(cnst.REGEX_TITLE, title)[0].strip()
             item['codes'] = re.findall(cnst.REGEX_CODE, codes)[0].strip()
             item['syllabus'] = syllabus.strip()
-            item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
             req = re.findall(cnst.REGEX_PRE_REQ, codes)
             if req:
-                item['requirement'] = self.processPreReqs(req[0].strip())
+                item['requirement'] = self.process_pre_reqs(req[0].strip())
             else:
                 item['requirement'] = None
             yield item
 
-    def processPreReqs(self, reqsString):
+    @staticmethod
+    def process_pre_reqs(reqs_string):
         """
-        Returns a list of lists containing the
-        necessary pre-requisites for each course
+        Process pre-requisites into a list for each course
+        :param reqs_string:
+        :return: list of lists containing the necessary pre-requisites for each course
         """
-        if (not reqsString):
+        if not reqs_string:
             logging.info("Empty pre-requisites string")
             pass
 
         reqs_list = []
 
         # multiple pre-requisites
-        if ("/" in reqsString):
-            for reqs in reqsString.split("/"):
+        if "/" in reqs_string:
+            for reqs in reqs_string.split("/"):
                 reqs_list.append(re.findall(cnst.REGEX_ID, reqs))
 
         else:
-            reqs_list.append(re.findall(cnst.REGEX_ID, reqsString))
+            reqs_list.append(re.findall(cnst.REGEX_ID, reqs_string))
         return reqs_list
