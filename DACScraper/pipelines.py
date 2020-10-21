@@ -7,7 +7,7 @@
 import logging
 import mysql.connector
 from DACScraper.items import CourseItem, SemestersItem
-from scrapy.utils.project import get_project_settings
+from DACScraper.settings import dac_pwd, dac_user, database_name, dac_host
 
 class DacscraperPipeline(object):
     def process_item(self, item, spider):
@@ -15,10 +15,8 @@ class DacscraperPipeline(object):
 
 class MySQLPipeline(object):
 
-    def open_spider(self, spider):
-        settings = get_project_settings()
-        self.cnx = mysql.connector.connect(user=settings.get('mysql_usr'), password=settings.get('mysql_pwd'),
-                                           host='127.0.0.1', database=settings.get('database_name'))
+    def __init__(self):
+        self.cnx = mysql.connector.connect(user=dac_user, password=dac_pwd, host=dac_host, database=database_name)
 
     def process_item(self, item, spider):
         if isinstance(item, CourseItem):

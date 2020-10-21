@@ -97,6 +97,7 @@ FEED_EXPORT_ENCODING = 'utf-8'
 FILES_STORE = '.scrapy'
 
 # MySQL
-mysql_usr = os.getenv('dac_user')
-mysql_pwd = os.getenv('dac_pwd')
+dac_user = os.getenv('dac_user')
+dac_pwd = os.getenv('dac_pwd')
 database_name = os.getenv('database_name', 'dac_database')
+dac_host = os.getenv('dac_host', '127.0.0.1')
