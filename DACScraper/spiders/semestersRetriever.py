@@ -4,32 +4,13 @@ import logging
 import json
 import re
 from DACScraper.items import SemestersItem
+import DACScraper.constants as cnst
 
-# XPATH
-XPATH_COURSE = "//h2[contains(text(), 'Curso')]/text()"
-XPATH_EMPHASIS = "//h1/text()"
-XPATH_SEMESTER = '//div[@class="div100"]//a[contains(text(), "(")]/text() | //div[@class="div100"]//text()[contains(., "Semestre")]'
-XPATH_SEMESTER += ' | //div[@class="div100"]//text()[contains(., "eletivos")]'
-XPATH_ELECTIVES = '//strong[contains(text(),"Disciplinas Eletivas")]'
-XPATH_ELECTIVES_DATA = '//following-sibling::br//following-sibling::text()[contains(.,"dentre")]'
-XPATH_SUBJECTS = '/following-sibling::div//div[@class="div50b"]/a/text()'
-# REGEX
-REGEX_EMPHASIS_DETECTOR = "([A-Z]{1,3}) -"
-REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
-REGEX_COURSE_CODE_FROM_PROPOSAL_URL = 'sug([0-9]{1,3})'
-REGEX_COURSE_NAME = "Curso [0-9]{1,3} - (.*)"
-REGEX_CREDITS_AMOUNT = "([0-9]{1,2}) Cr"
-REGEX_NUMERIC_ONLY = "[^0-9]"
-REGEX_REMOVE_PARENTHESES = r'\([^)]*\)'
-
-# Constansts
-FIRST_SEMESTER = "01° Semestre"
-FIRST_SEMESTER_ALT = "01� Semestre"
-ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 
 class SemestersretrieverSpider(scrapy.Spider):
     name = 'semestersRetriever'
-    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html', 'https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug11.html']
+    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html',
+                   'https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug11.html']
     text_electives = []
     '''
     sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',
@@ -39,9 +20,9 @@ class SemestersretrieverSpider(scrapy.Spider):
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug12catalogo2018.html',
                     'file:///mnt/sda1/github/DACScraper/.scrapy/sug34catalogo2018.html']
     '''
-    
+
     def __init__(self, urls=sample_urls, filename=None, **kwargs):
-        
+
         if filename:
             logging.info(f"Loading '{filename}'")
             f = open(filename)
@@ -80,17 +61,17 @@ class SemestersretrieverSpider(scrapy.Spider):
     def start_requests(self):
         # Gets electives for all emphasis
         for url in self.urls:
-            course_code = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, url)[0]
-            course_year = re.findall(REGEX_CATALOG_YEAR, url)[0]
+            course_code = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, url)[0]
+            course_year = re.findall(cnst.REGEX_CATALOG_YEAR, url)[0]
             yield scrapy.Request(url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
         # Checks if the course has multiple emphasis
-        possible_emphasis = response.xpath(XPATH_EMPHASIS).getall()
+        possible_emphasis = response.xpath(cnst.XPATH_EMPHASIS).getall()
         emphasis = False
         if possible_emphasis:
             for e in possible_emphasis:
-                if re.findall(REGEX_EMPHASIS_DETECTOR, e):
+                if re.findall(cnst.REGEX_EMPHASIS_DETECTOR, e):
                     emphasis = True
                     break
         if emphasis:
@@ -109,37 +90,38 @@ class SemestersretrieverSpider(scrapy.Spider):
         Returns:
             SemestersItem (scrapy.Item): item with information about the course
         """
-        sems = response.xpath(XPATH_SEMESTER).getall()
+        sems = response.xpath(cnst.XPATH_SEMESTER).getall()
 
         # Splits all emphasis semesters
         split_indexes = []
         for i in range(len(sems)):
-            if FIRST_SEMESTER in sems[i] or FIRST_SEMESTER_ALT in sems[i]:
+            if cnst.FIRST_SEMESTER in sems[i] or cnst.FIRST_SEMESTER_ALT in sems[i]:
                 split_indexes.append(i)
-        emphasis_sems = [sems[i:j] for i,j in zip(split_indexes, split_indexes[1:]+[None])]
-        emphasis_titles = response.xpath(XPATH_EMPHASIS).getall()
+        emphasis_sems = [sems[i:j] for i, j in zip(split_indexes, split_indexes[1:] + [None])]
+        emphasis_titles = response.xpath(cnst.XPATH_EMPHASIS).getall()
 
         num_emphasis = len(emphasis_titles)
         assert len(emphasis_sems) == num_emphasis
-        
+
         print("emphasis_titles: " + str(emphasis_titles))
-        
+
         lst_electives = self.text_electives
         print("lst_electives")
         print(lst_electives)
         # Builds an item for each emphasis
-        for i in range(num_emphasis): 
+        for i in range(num_emphasis):
             item = SemestersItem()
-            item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
-            item['code'] = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
-            item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
-            emp_code = re.findall(REGEX_EMPHASIS_DETECTOR, emphasis_titles[i])[0]
+            item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
+            item['code'] = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
+            item['name'] = re.findall(cnst.REGEX_COURSE_NAME, response.xpath(cnst.XPATH_COURSE).get())[0]
+            emp_code = re.findall(cnst.REGEX_EMPHASIS_DETECTOR, emphasis_titles[i])[0]
             item['emphasis'] = emp_code
             item['id'] = item['code'] + "_" + emp_code + "_" + item['year']
             item['semesters'] = self.build_semesters_dict(emphasis_sems[i])
             electives_url = self.get_electives_url(item['code'], item['year'])
-            yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': i}, dont_filter=True)
-    
+            yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': i},
+                                 dont_filter=True)
+
     def get_electives_url(self, course_code, year):
         '''Build a list with each course emphasis into self.text_electives
 
@@ -154,33 +136,33 @@ class SemestersretrieverSpider(scrapy.Spider):
         return url
 
     def parse_electives(self, response):
-        '''Parses courses electives and adds the data to self.text_electives 
+        """Parses courses electives and adds the data to self.text_electives
         #TODO What to return when the course has no electives?
 
         Args:
-            reponse (scrapy.response): response from the url of the course with
+            response (scrapy.response): response from the url of the course with
             the electives text
         
         Returns:
             (python.list): a list with each emphasis text or None if the course has no emphasis
-        '''
-        xpath_electives_text = XPATH_ELECTIVES + "/text()"
-        xpath_electives = xpath_electives_text + " | " + XPATH_ELECTIVES + XPATH_ELECTIVES_DATA + " | " + XPATH_ELECTIVES + XPATH_SUBJECTS
+        """
+        xpath_electives_text = cnst.XPATH_ELECTIVES + "/text()"
+        xpath_electives = xpath_electives_text + " | " + cnst.XPATH_ELECTIVES + cnst.XPATH_ELECTIVES_DATA + " | " + \
+                          cnst.XPATH_ELECTIVES + cnst.XPATH_SUBJECTS
 
         electives_list = response.xpath(xpath_electives).getall()
 
         split_indexes = []
         for i in range(len(electives_list)):
-            if ELECTIVES_DETECTOR in electives_list[i]:
+            if cnst.ELECTIVES_DETECTOR in electives_list[i]:
                 split_indexes.append(i)
             if '---' in electives_list[i]:
                 electives_list[i] = "Qualquer Disciplina da Unicamp"
             if '\n' in electives_list[i]:
                 electives_list[i] = re.sub('\\n', '', electives_list[i])
-        
-        
+
         text_electives = []
-        lst_electives = [electives_list[i+1:j] for i,j in zip(split_indexes, split_indexes[1:]+[None])]
+        lst_electives = [electives_list[i + 1:j] for i, j in zip(split_indexes, split_indexes[1:] + [None])]
         for group in lst_electives:
             single_text = ""
             for e in group:
@@ -194,37 +176,37 @@ class SemestersretrieverSpider(scrapy.Spider):
         yield item
 
     def parse_without_emphasis(self, response):
-        sems = response.xpath(XPATH_SEMESTER).getall()
+        sems = response.xpath(cnst.XPATH_SEMESTER).getall()
         item = SemestersItem()
-        item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
-        item['code'] = re.findall(REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
-        item['name'] = re.findall(REGEX_COURSE_NAME, response.xpath(XPATH_COURSE).get())[0]
+        item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
+        item['code'] = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
+        item['name'] = re.findall(cnst.REGEX_COURSE_NAME, response.xpath(cnst.XPATH_COURSE).get())[0]
         item['id'] = item['code'] + "_" + item['year']
         item['semesters'] = self.build_semesters_dict(sems)
         item['emphasis'] = ""
         electives_url = self.get_electives_url(item['code'], item['year'])
-        yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': 0}, dont_filter=True)
+        yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': 0},
+                             dont_filter=True)
 
     def build_semesters_dict(self, emphasis_sem):
         semesters = []
         sem_atual = None
-        for it in emphasis_sem: 
+        for it in emphasis_sem:
             if "Semestre" in it:
                 if sem_atual:
                     semesters.append(sem_atual)
-                creds = re.findall(REGEX_CREDITS_AMOUNT, it)[0]
-                sem_atual = {"creditos": creds, "materias": []} 
+                creds = re.findall(cnst.REGEX_CREDITS_AMOUNT, it)[0]
+                sem_atual = {"creditos": creds, "materias": []}
             else:
-                if "(" in it: 
-                    materia = re.sub(REGEX_REMOVE_PARENTHESES, '', it)
+                if "(" in it:
+                    materia = re.sub(cnst.REGEX_REMOVE_PARENTHESES, '', it)
                 else:
-                    materia = re.sub(REGEX_NUMERIC_ONLY, '', it) + " créditos eletivos"
+                    materia = re.sub(cnst.REGEX_NUMERIC_ONLY, '', it) + " créditos eletivos"
                 sem_atual["materias"].append(materia.strip())
         semesters.append(sem_atual)
-        #print("build - semesters: " +str(semesters))
+        # print("build - semesters: " +str(semesters))
         s = {}
         for i in range(len(semesters)):
-            s[str(i+1)] = semesters[i]
-        
-        return s
+            s[str(i + 1)] = semesters[i]
 
+        return s

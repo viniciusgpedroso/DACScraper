@@ -3,15 +3,8 @@ import scrapy
 import re
 import logging
 from DACScraper.items import CourseListItem
+import DACScraper.constants as cnst
 
-# REGEX
-REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
-
-# XPATH
-XPATH_COURSE_CODE = '//div[@class="texto"]//span/text()'
-
-# Constants
-FIRST_YEAR = "2018" # Previous catalogs do not have the same structure
 
 class SemesterslisterSpider(scrapy.Spider):
     name = 'semestersLister'
@@ -21,7 +14,7 @@ class SemesterslisterSpider(scrapy.Spider):
         Initializes from sample_urls if not empty 
         or reads from json file with structure
         """
-        self.urls = self.build_urls(FIRST_YEAR, last_year)
+        self.urls = self.build_urls(cnst.FIRST_YEAR, last_year)
 
     def build_urls(self, first_year, last_year):
         """Build urls from first year to last year (inclusive)
@@ -54,10 +47,10 @@ class SemesterslisterSpider(scrapy.Spider):
     
     def parse(self, response):
         item = CourseListItem()
-        item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
+        item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
 
         courses_list = []
-        courses_codes = response.xpath(XPATH_COURSE_CODE).getall()
+        courses_codes = response.xpath(cnst.XPATH_COURSE_CODE).getall()
         for i in range(len(courses_codes)):
             courses_list.append(int(courses_codes[i]))
         courses_list.sort()

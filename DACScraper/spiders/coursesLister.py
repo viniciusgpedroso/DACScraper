@@ -4,12 +4,8 @@ import json
 import logging
 import re
 from DACScraper.items import CourseIdURLItem
+import DACScraper.constants as cnst
 
-# XPATHS
-XPATH_IDS = '//div[@class="div10b"]//@href'
-
-# REGEX
-REGEX_CATALOG_YEAR = 'catalogo([0-9]{4})'
 
 class CourseslisterSpider(scrapy.Spider):
     name = 'coursesLister'
@@ -26,7 +22,7 @@ class CourseslisterSpider(scrapy.Spider):
         or reads from json file with structure
         TODO estabilish url structure from file
         """
-        if (len(urls) == 0):
+        if len(urls) == 0:
             logging.info(f"Loading '{filename}'")
             f = open(filename)
             data = json.loads(f.read())
@@ -43,9 +39,9 @@ class CourseslisterSpider(scrapy.Spider):
         """
         Requests for each course code prefix and callback to parse
         """
-        for relative_url in response.xpath(XPATH_IDS).getall():
+        for relative_url in response.xpath(cnst.XPATH_IDS).getall():
             item = CourseIdURLItem()
-            item['year'] = re.findall(REGEX_CATALOG_YEAR, response.url)[0]
+            item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
             url = response.urljoin(relative_url)
             request = scrapy.Request(url, callback=self.parse)
             request.meta['item'] = item
@@ -54,7 +50,7 @@ class CourseslisterSpider(scrapy.Spider):
     def parse(self, response):
         
         item = response.meta['item']
-        relative_url = response.xpath(XPATH_IDS).get()
+        relative_url = response.xpath(cnst.XPATH_IDS).get()
         url = response.urljoin(relative_url)
         item['url'] = url
         yield item
