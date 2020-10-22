@@ -7,37 +7,39 @@ from DACScraper.items import CourseIdURLItem
 import DACScraper.constants as cnst
 
 
-class CourseslisterSpider(scrapy.Spider):
+class CoursesListerSpider(scrapy.Spider):
+    """
+    Spider to list all courses urls for a catalog year and add to 'CourseIdURLItem'.
+    """
     name = 'coursesLister'
 
-    """
-    1st Level: Obtains all div10b urls and follows link
-    2nd Level: Obtains first div10b url and saves
-    """
-    sample_urls = ["https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/TiposDisciplinas.html"]
-
-    def __init__(self, urls=sample_urls, filename='', **kwargs):
+    def __init__(self, filename):
         """
-        Initializes from sample_urls if not empty 
-        or reads from json file with structure
-        TODO estabilish url structure from file
+        Reads the urls from the filename
+        :param filename: location of json file with an 'urls' key and an array of urls.
         """
-        if len(urls) == 0:
-            logging.info(f"Loading '{filename}'")
-            f = open(filename)
-            data = json.loads(f.read())
-            urls = data['urls']
-            f.close()
-        
-        self.urls = urls
+        logging.info(f"Loading '{filename}'")
+        f = open(filename)
+        data = json.loads(f.read())
+        self.urls = data['urls']
+        self.urls_seen = set()
+        f.close()
     
     def start_requests(self):
+        """
+        Starts requests using the urls from 'self.urls' list and obtains the '1st Level' - all div10b urls and callback
+        to continue_requests
+        :return: scrapy.http.requests to be parsed
+        """
         for url in self.urls:
             yield scrapy.Request(url, callback=self.continue_requests)
     
     def continue_requests(self, response):
         """
-        Requests for each course code prefix and callback to parse
+        Start requests for each course code prefix and obtains the '2nd Level' - first div10b url, saves and
+        callback to parse
+        :param response:
+        :return:
         """
         for relative_url in response.xpath(cnst.XPATH_IDS).getall():
             item = CourseIdURLItem()
@@ -48,9 +50,15 @@ class CourseslisterSpider(scrapy.Spider):
             yield request
     
     def parse(self, response):
-        
+        """
+        Parses the response and yields CourseIdItem objects
+        :param response: scrapy.http.response objects
+        :return: filled CourseIdItem object
+        """
         item = response.meta['item']
         relative_url = response.xpath(cnst.XPATH_IDS).get()
-        url = response.urljoin(relative_url)
-        item['url'] = url
-        yield item
+        url = response.urljoin(relative_url).split('#')[0]  # Avoid duplicates
+        if url not in self.urls_seen:
+            self.urls_seen.add(url)
+            item['url'] = url
+            yield item
