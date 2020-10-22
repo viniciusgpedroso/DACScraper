@@ -3,6 +3,7 @@ FIRST_SEMESTER = "01° Semestre"
 FIRST_SEMESTER_ALT = "01� Semestre"
 ELECTIVES_DETECTOR = "Disciplinas Eletivas"
 FIRST_YEAR = "2013"  # Previous catalogs do not have the same structure
+LAST_YEAR = "2020"
 
 # REGEX
 REGEX_CATALOG_YEAR = r'catalogo([0-9]{4})'

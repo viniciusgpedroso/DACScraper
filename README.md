@@ -5,7 +5,28 @@
 
 ## Spiders
 
+### coursesLister
+
+Spider to list all courses urls for a catalog year and add to 'CourseIdURLItem'.
+
+How to run:
+```
+scrapy crawl coursesLister -a filename="samples/coursesListerSample.json" -o .scrapy/outputCoursesLister.json
+```
+where the filename must be the location of a json file with an 'urls' key and an array of urls, sample:
+``` 
+{
+  "urls": [
+    "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2020/TiposDisciplinas.html"
+  ]
+}
+```
+
+The output can be used as input for the ```coursesRetriever``` spider.
+
 ### coursesRetriever
+
+Spider to retrieve info about courses and add to a 'CourseItem' using the urls from ```coursesLister``` output.
 
 How to run:
 ```
@@ -28,8 +49,7 @@ with keys 'url' and 'year', sample:
 
 ## Pipelines
 
-Currently there is a single pipeline that uses MySQL as a database, 
-there are json and default Feed Exports available native to scrapy
+Currently there is a single pipeline that uses MySQL, there are json and default Feed Exports available native to scrapy
 https://docs.scrapy.org/en/latest/topics/feed-exports.html
 
 ### MySQLPipeline
