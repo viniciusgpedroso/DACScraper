@@ -7,44 +7,39 @@ from DACScraper.items import SemestersItem
 import DACScraper.constants as cnst
 
 
-class SemestersretrieverSpider(scrapy.Spider):
+class SemestersRetrieverSpider(scrapy.Spider):
+    """
+    Spider to retrieve info about the 'majors' semesters and add to a 'SemestersItem' objects.
+    """
     name = 'semestersRetriever'
-    sample_urls = ['https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug34.html',
-                   'https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo2019/proposta/sug11.html']
     text_electives = []
-    '''
-    sample_urls = ['file:///mnt/sda1/github/DACScraper/.scrapy/sug2catalogo2017.html',
-                    'file:///mnt/sda1/github/DACScraper/.scrapy/sug48catalogo2013.html',
-                    'file:///mnt/sda1/github/DACScraper/.scrapy/sug108catalogo2017.html',
-                    'file:///mnt/sda1/github/DACScraper/.scrapy/sug11catalogo2018.html',
-                    'file:///mnt/sda1/github/DACScraper/.scrapy/sug12catalogo2018.html',
-                    'file:///mnt/sda1/github/DACScraper/.scrapy/sug34catalogo2018.html']
-    '''
 
-    def __init__(self, urls=sample_urls, filename=None, **kwargs):
+    def __init__(self, filename: str, **kwargs):
+        """
+        Reads the urls from the filename
 
-        if filename:
-            logging.info(f"Loading '{filename}'")
-            f = open(filename)
-            data = json.loads(f.read())
-            # save numbers and save urls
-            self.courses_lists = data
-            urls = self.build_proposal_urls(self.courses_lists)
-            f.close()
-        else:
-            urls = self.sample_urls
+        :param filename: location of json file with an object with 'year' and 'courses_list' as keys.
+        The 'courses_list' contains the code ids for each 'major' to be scraped.
+        """
+        super().__init__(**kwargs)
+        logging.info(f"Loading '{filename}'")
+        f = open(filename)
+        data = json.loads(f.read())
+        # save numbers and save urls
+        self.courses_lists = data
+        urls = self.build_proposal_urls(self.courses_lists)
+        f.close()
         self.urls = urls
 
-    def build_proposal_urls(self, courses_list):
-        """Build urls from first year to last year (inclusive)
+    @staticmethod
+    def build_proposal_urls(courses_list: list):
+        """
+        Build urls from first year to last year (inclusive)
 
-        Args:
-            courses_list (list of dics with year and courses_list attr): 
-                list of valid courses numbers for a given year
-
-        Returns:
-            list of urls in the format
-            https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo{YEAR}/proposta/sug{CODE}.html
+        :param courses_list:    (list of dicts with year and courses_list):
+                                list of valid courses numbers for a given year
+        :return:                list of urls in the format
+                                https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo{YEAR}/proposta/sug{CODE}.html
         """
         preffix = "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo"
         after_year = "/proposta/sug"
@@ -53,12 +48,15 @@ class SemestersretrieverSpider(scrapy.Spider):
         for courses_year in courses_list:
             year = courses_year['year']
             for course in courses_year["courses_list"]:
-                urls.append(preffix + year + after_year + str(course) + after_course)
+                urls.append("{}{}{}{}{}".format(preffix, year, after_year, course, after_course))
 
-        print("URLS:")
         return urls
 
     def start_requests(self):
+        """
+        Starts requests using the urls from 'self.urls' list.
+        :return: scrapy.http.requests to be parsed
+        """
         # Gets electives for all emphasis
         for url in self.urls:
             course_code = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, url)[0]
@@ -66,6 +64,11 @@ class SemestersretrieverSpider(scrapy.Spider):
             yield scrapy.Request(url, callback=self.parse, dont_filter=True)
 
     def parse(self, response):
+        """
+        Parses the response from 'major' with and without 'minors'
+        :param response:    scrapy.http.response objects
+        :return:            scrapy.http.requests to parse electives info and a partially filled SemestersItem in meta
+        """
         # Checks if the course has multiple emphasis
         possible_emphasis = response.xpath(cnst.XPATH_EMPHASIS).getall()
         emphasis = False
@@ -75,20 +78,16 @@ class SemestersretrieverSpider(scrapy.Spider):
                     emphasis = True
                     break
         if emphasis:
-            print("emphasis True")
+            logging.info("emphasis True")
             return self.parse_with_emphasis(response)
         else:
             return self.parse_without_emphasis(response)
 
     def parse_with_emphasis(self, response):
-        """Parses courses with multiple emphasis
-
-        Args:
-            reponse (scrapy.response): response from the url of the course with
-            multiple emphasis
-        
-        Returns:
-            SemestersItem (scrapy.Item): item with information about the course
+        """
+        Parses courses with multiple emphasis
+        :param response:    response from the url of the course with multiple emphasis or 'minors'
+        :return:            scrapy.http.request with a partially filled SemestersItem in meta
         """
         sems = response.xpath(cnst.XPATH_SEMESTER).getall()
 
@@ -103,17 +102,14 @@ class SemestersretrieverSpider(scrapy.Spider):
         num_emphasis = len(emphasis_titles)
         assert len(emphasis_sems) == num_emphasis
 
-        print("emphasis_titles: " + str(emphasis_titles))
+        logging.info('emphasis_titles: {}', emphasis_titles)
 
         lst_electives = self.text_electives
-        print("lst_electives")
-        print(lst_electives)
+        logging.info("lst_electives" + lst_electives)
         # Builds an item for each emphasis
         for i in range(num_emphasis):
             item = SemestersItem()
-            item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
-            item['code'] = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
-            item['name'] = re.findall(cnst.REGEX_COURSE_NAME, response.xpath(cnst.XPATH_COURSE).get())[0]
+            self.fill_basic_semester_info(response, item)
             emp_code = re.findall(cnst.REGEX_EMPHASIS_DETECTOR, emphasis_titles[i])[0]
             item['emphasis'] = emp_code
             item['id'] = item['code'] + "_" + emp_code + "_" + item['year']
@@ -122,29 +118,29 @@ class SemestersretrieverSpider(scrapy.Spider):
             yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': i},
                                  dont_filter=True)
 
-    def get_electives_url(self, course_code, year):
-        '''Build a list with each course emphasis into self.text_electives
+    @staticmethod
+    def get_electives_url(course_code: str, year: str):
+        """
+        Build a list with each 'minor' emphasis into self.text_electives
 
-        Args:
-            course_code (python.str): the code of the course (without emphasis)
-            year (python.str): the year of the course
-        '''
+        :param course_code: the code of the course (without emphasis)
+        :param year:        the year of the course
+        :return:            url for that 'minor' emphasis
+        """
         url_prefix = "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo"
         url_before_code = "/curriculoPleno/cp"
         url_after_code = ".html"
-        url = url_prefix + str(year) + url_before_code + str(course_code) + url_after_code
+        url = ('{}{}{}{}{}'.format(url_prefix, year, url_before_code, course_code, url_after_code))
         return url
 
-    def parse_electives(self, response):
-        """Parses courses electives and adds the data to self.text_electives
-        #TODO What to return when the course has no electives?
+    @staticmethod
+    def parse_electives(response):
+        """
+        Parses courses electives and adds the data to self.text_electives
 
-        Args:
-            response (scrapy.response): response from the url of the course with
-            the electives text
-        
-        Returns:
-            (python.list): a list with each emphasis text or None if the course has no emphasis
+        # TODO What to return when the course has no electives?
+        :param response:    response from the url of the course with the electives text
+        :return:            a filled SemestersItem object
         """
         xpath_electives_text = cnst.XPATH_ELECTIVES + "/text()"
         xpath_electives = xpath_electives_text + " | " + cnst.XPATH_ELECTIVES + cnst.XPATH_ELECTIVES_DATA + " | " + \
@@ -176,11 +172,14 @@ class SemestersretrieverSpider(scrapy.Spider):
         yield item
 
     def parse_without_emphasis(self, response):
+        """
+        Parses courses without multiple emphasis
+        :param response:    response from the url of the course
+        :return:            scrapy.http.request with a partially filled SemestersItem in meta
+        """
         sems = response.xpath(cnst.XPATH_SEMESTER).getall()
         item = SemestersItem()
-        item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
-        item['code'] = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
-        item['name'] = re.findall(cnst.REGEX_COURSE_NAME, response.xpath(cnst.XPATH_COURSE).get())[0]
+        self.fill_basic_semester_info(response, item)
         item['id'] = item['code'] + "_" + item['year']
         item['semesters'] = self.build_semesters_dict(sems)
         item['emphasis'] = ""
@@ -188,7 +187,13 @@ class SemestersretrieverSpider(scrapy.Spider):
         yield scrapy.Request(electives_url, callback=self.parse_electives, meta={'item': item, 'emp_index': 0},
                              dont_filter=True)
 
-    def build_semesters_dict(self, emphasis_sem):
+    @staticmethod
+    def build_semesters_dict(emphasis_sem: list):
+        """
+        Builds an dictionary with the semesters info
+        :param emphasis_sem:    list with all the semesters, credits and subjects in order
+        :return:                dictionary with the semesters info
+        """
         semesters = []
         sem_atual = None
         for it in emphasis_sem:
@@ -204,9 +209,20 @@ class SemestersretrieverSpider(scrapy.Spider):
                     materia = re.sub(cnst.REGEX_NUMERIC_ONLY, '', it) + " créditos eletivos"
                 sem_atual["materias"].append(materia.strip())
         semesters.append(sem_atual)
-        # print("build - semesters: " +str(semesters))
         s = {}
         for i in range(len(semesters)):
             s[str(i + 1)] = semesters[i]
 
         return s
+
+    @staticmethod
+    def fill_basic_semester_info(response, item: SemestersItem):
+        """
+        Partially fills a 'SemestersItem' object with basic info, 'year', 'code' and 'name'.
+
+        :param response:    scrapy.http.response with the info to fill the item
+        :param item:        to be filled with year, 'major' code and 'major' name
+        """
+        item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
+        item['code'] = re.findall(cnst.REGEX_COURSE_CODE_FROM_PROPOSAL_URL, response.url)[0]
+        item['name'] = re.findall(cnst.REGEX_COURSE_NAME, response.xpath(cnst.XPATH_COURSE).get())[0]
