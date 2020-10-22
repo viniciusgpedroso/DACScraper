@@ -47,6 +47,19 @@ with keys 'url' and 'year', sample:
 ]
 ```
 
+### semestersLister
+
+Spider to list all the 'majors' codes and add to 'CourseListItem' objects.
+
+How to run:
+```
+crawl semestersLister -a first_year="2019" -a last_year="2020" -o ".scrapy/outputSemesterLister.json"
+```
+The oldest ```first_year``` supported is 2013, and the ```last_year``` is the year of the last catalog available. 
+
+The output can be used as input for the ```semestersRetriever``` spider.
+
+
 ## Pipelines
 
 Currently there is a single pipeline that uses MySQL, there are json and default Feed Exports available native to scrapy

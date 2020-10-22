@@ -1,31 +1,35 @@
 # -*- coding: utf-8 -*-
+from abc import ABC
+
 import scrapy
 import re
-import logging
 from DACScraper.items import CourseListItem
 import DACScraper.constants as cnst
 
 
-class SemesterslisterSpider(scrapy.Spider):
+class SemestersListerSpider(scrapy.Spider):
+    """
+    Spider to list all the 'majors' codes and add to CourseListItem objects.
+    """
     name = 'semestersLister'
 
-    def __init__(self, last_year="2020", **kwargs):
+    def __init__(self, first_year=cnst.FIRST_YEAR, last_year=cnst.LAST_YEAR, **kwargs):
         """
-        Initializes from sample_urls if not empty 
-        or reads from json file with structure
+        Initializes the catalog urls in the range from 'first_year' and 'last_year' using build_urls.
+        :param first_year:  first_year of the catalog to be used to generate the urls, oldest year supported: 2013.
+        :param last_year:   last_year of the catalog to be used to generate the urls
         """
-        self.urls = self.build_urls(cnst.FIRST_YEAR, last_year)
+        super().__init__(**kwargs)
+        self.urls = self.build_urls(first_year, last_year)
 
-    def build_urls(self, first_year, last_year):
-        """Build urls from first year to last year (inclusive)
-
-        Args:
-            first_year (str): valid catalog year in the {XXXX} format
-            last_year (str): valid catalog year in the {XXXX} format
-
-        Returns:
-            if last_year < first_year, returns an empty list
-            else, a list with catalog urls from first year to last year
+    @staticmethod
+    def build_urls(first_year: str, last_year: str):
+        """
+        Builds the catalog urls in the range 'first_year' to 'last_year'
+        :param first_year:  with a valid catalog year in the {XXXX} format
+        :param last_year:   with valid catalog year in the {XXXX} format
+        :return:            an empty list if last_year < first_year,
+                            else, a list with catalog urls from first year to last year
         """
         prefix = "https://www.dac.unicamp.br/sistemas/catalogos/grad/catalogo"
         suffix = "/cursos.html"
@@ -42,10 +46,20 @@ class SemesterslisterSpider(scrapy.Spider):
         return urls
     
     def start_requests(self):
+        """
+        Starts requests using the urls from 'self.urls' list.
+        :return: scrapy.http.requests to be parsed
+        """
         for url in self.urls:
-            yield scrapy.Request(url, callback=self.parse)
-    
-    def parse(self, response):
+            yield scrapy.Request(url, callback=self.parse_course_list)
+
+    @staticmethod
+    def parse_course_list(response):
+        """
+        Parses the response and yields CourseListItem objects
+        :param response:    response from the url of each 'major'
+        :return:            filled CourseListItem object
+        """
         item = CourseListItem()
         item['year'] = re.findall(cnst.REGEX_CATALOG_YEAR, response.url)[0]
 
