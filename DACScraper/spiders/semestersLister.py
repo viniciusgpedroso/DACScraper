@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from abc import ABC
-
 import scrapy
 import re
 from DACScraper.items import CourseListItem

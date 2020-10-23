@@ -1,4 +1,4 @@
-# Constansts
+# Constants
 FIRST_SEMESTER = "01° Semestre"
 FIRST_SEMESTER_ALT = "01� Semestre"
 ELECTIVES_DETECTOR = "Disciplinas Eletivas"
@@ -19,7 +19,7 @@ REGEX_CREDITS_AMOUNT = r'([0-9]{1,2}) Cr'
 REGEX_NUMERIC_ONLY = r'[^0-9]'
 REGEX_REMOVE_PARENTHESES = r'\([^)]*\)'
 
-# XPATHS
+# XPATH
 XPATH_IDS = '//div[@class="div10b"]//@href'
 XPATH_PARENT = "//div[@class='ancora']"
 XPATH_TITLE = "self::*//a/text()"
