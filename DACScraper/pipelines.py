@@ -9,52 +9,26 @@ import mysql.connector
 from DACScraper.items import CourseItem, SemestersItem
 from DACScraper.settings import dac_pwd, dac_user, database_name, dac_host
 
-class DacscraperPipeline(object):
-    def process_item(self, item, spider):
-        return item
 
 class MySQLPipeline(object):
+    """
+    Pipeline to process items and add to a database using the credentials in settings.
+    """
 
     def __init__(self):
+        """
+        Initializes connection with mysql database using the credentials in settings.
+        """
         self.cnx = mysql.connector.connect(user=dac_user, password=dac_pwd, host=dac_host, database=database_name)
 
     def process_item(self, item, spider):
+        """
+        Process 'CourseItem' and 'SemestersItem' objects and add data to mysql database.
+        :param item:    object with 'CourseItem' or 'SemestersItem' data
+        :param spider:
+        """
         if isinstance(item, CourseItem):
-            cursor = self.cnx.cursor()
-            # Add to table materia
-            add_curso = (" "
-               "INSERT INTO materia (idmateria, year, title, codes, syllabus) "
-               "VALUES (%s, %s, %s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE idmateria=VALUES(idmateria), year=VALUES(year), "
-               "title=VALUES(title), codes=VALUES(codes), syllabus=VALUES(syllabus)")
-            data_curso = (item['id'], item['year'], item['title'], item['codes'], item['syllabus'])
-            cursor.execute(add_curso, data_curso)
-            self.cnx.commit()
-            # Add to table reqs
-            add_reqs = ("INSERT INTO requirements "
-               "(grupo, idmateria, req, year, partial) "
-               "VALUES (%s, %s, %s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE grupo=VALUES(grupo), idmateria=VALUES(idmateria), req=VALUES(req), "
-                "year=VALUES(year), partial=VALUES(partial)")
-            reqs = item['requirement']
-            if reqs:
-                group = 1
-                for req in reqs:
-                    for materia in req:
-                        partial = 0
-                        if '*' in materia:
-                            partial = 1
-                            materia = materia.replace('*', '')
-
-                        data_reqs = (group, item['id'], materia, item['year'], partial)
-                        cursor.execute(add_reqs, data_reqs)
-                    group += 1
-            else:
-                partial = 0
-                data_reqs = (0, item['id'], "Nenhum", item['year'], partial)
-                cursor.execute(add_reqs, data_reqs)
-            self.cnx.commit()
-            cursor.close()
+            self.process_course_item(item)
         if isinstance(item, SemestersItem):
             cursor = self.cnx.cursor()
             # Add to table curso
@@ -77,6 +51,66 @@ class MySQLPipeline(object):
                     cursor.execute(add_curso, data_curso)
                     self.cnx.commit()
             cursor.close()
+
+    def process_course_item(self, item):
+        """
+        Process 'CourseItem' objects and add data to the tables 'materia' and 'requirements'.
+
+        :param item:  object with 'CourseItem' data
+        """
+        cursor = self.cnx.cursor()
+        # Add to table reqs
+        self.add_subject(item, cursor)
+        self.add_requirements(item, cursor)
+        cursor.close()
+
+    def add_subject(self, item, cursor):
+        """
+        Add subjects to table 'materia'.
+
+        :param item:    object with 'CourseItem' data
+        :param cursor:  mysql cursor
+        """
+        # Add to table materia
+        add_curso = (" "
+                     "INSERT INTO materia (idmateria, year, title, codes, syllabus) "
+                     "VALUES (%s, %s, %s, %s, %s) "
+                     "ON DUPLICATE KEY UPDATE idmateria=VALUES(idmateria), year=VALUES(year), "
+                     "title=VALUES(title), codes=VALUES(codes), syllabus=VALUES(syllabus)")
+        data_curso = (item['id'], item['year'], item['title'], item['codes'], item['syllabus'])
+        cursor.execute(add_curso, data_curso)
+        self.cnx.commit()
+
+    def add_requirements(self, item, cursor):
+        """
+        Add requirements to table 'requirements'
+
+        :param item:    object with 'CourseItem' data
+        :param cursor:  mysql cursor
+        """
+        add_reqs = ("INSERT INTO requirements "
+                    "(grupo, idmateria, req, year, partial) "
+                    "VALUES (%s, %s, %s, %s, %s) "
+                    "ON DUPLICATE KEY UPDATE grupo=VALUES(grupo), idmateria=VALUES(idmateria), req=VALUES(req), "
+                    "year=VALUES(year), partial=VALUES(partial)")
+        reqs = item['requirement']
+        if reqs:
+            group = 1
+            for req in reqs:
+                for materia in req:
+                    partial = 0
+                    if '*' in materia:
+                        partial = 1
+                        materia = materia.replace('*', '')
+
+                    data_reqs = (group, item['id'], materia, item['year'], partial)
+                    cursor.execute(add_reqs, data_reqs)
+                group += 1
+        else:
+            partial = 0
+            data_reqs = (0, item['id'], "Nenhum", item['year'], partial)
+            cursor.execute(add_reqs, data_reqs)
+        self.cnx.commit()
 
     def close_spider(self, spider):
         self.cnx.close()
