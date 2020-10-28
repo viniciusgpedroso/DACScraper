@@ -13,9 +13,10 @@ class CoursesRetrieverSpider(scrapy.Spider):
     """
     name = 'coursesRetriever'
 
-    def __init__(self, filename=None):
+    def __init__(self, filename: str):
         """
         Reads the urls from the filename
+
         :param filename: location of json file with an array of objects with 'url' and 'year' fields.
         """
         logging.info(f"Loading '{filename}'")
@@ -29,6 +30,7 @@ class CoursesRetrieverSpider(scrapy.Spider):
     def start_requests(self):
         """
         Starts requests using the urls from 'self.urls' list.
+
         :return: scrapy.http.requests to be parsed
         """
         for url in self.urls:
@@ -42,8 +44,9 @@ class CoursesRetrieverSpider(scrapy.Spider):
     def parse(self, response):
         """
         Parses the response and yields CourseItem objects
-        :param response: scrapy.http.response objects
-        :return: filled CourseItem object
+
+        :param response:    scrapy.http.response objects
+        :return:            filled CourseItem object
         """
         item = response.meta['item']
 
@@ -68,11 +71,12 @@ class CoursesRetrieverSpider(scrapy.Spider):
             yield item
 
     @staticmethod
-    def process_pre_reqs(reqs_string):
+    def process_pre_reqs(reqs_string: str):
         """
         Process pre-requisites into a list for each course
-        :param reqs_string:
-        :return: list of lists containing the necessary pre-requisites for each course
+
+        :param reqs_string: pre-requisites
+        :return:            list of lists containing the necessary pre-requisites for each course
         """
         if not reqs_string:
             logging.info("Empty pre-requisites string")
