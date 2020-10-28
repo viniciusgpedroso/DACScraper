@@ -29,28 +29,10 @@ class MySQLPipeline(object):
         """
         if isinstance(item, CourseItem):
             self.process_course_item(item)
-        if isinstance(item, SemestersItem):
-            cursor = self.cnx.cursor()
-            # Add to table curso
-            add_curso = (" "
-               "INSERT INTO curso (idcurso, code, name, year, emphasis, text_electives) "
-               "VALUES (%s, %s, %s, %s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE idcurso=VALUES(idcurso), code=VALUES(code), "
-               "name=VALUES(name), year=VALUES(year), emphasis=VALUES(emphasis), text_electives=VALUES(text_electives)")
-            data_curso = (item['id'], item['code'], item['name'], item['year'], item['emphasis'], item['text_electives'])
-            cursor.execute(add_curso, data_curso)
-            self.cnx.commit()
-            # Add to table semestres
-            add_curso = (" "
-               "INSERT INTO semestres (ind_semestre, materia, idcurso) "
-               "VALUES (%s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE ind_semestre=VALUES(ind_semestre), materia=VALUES(materia), idcurso=VALUES(idcurso)")
-            for s in item['semesters']:
-                for m in item['semesters'][s]['materias']:
-                    data_curso = (int(s), m, item['id'])
-                    cursor.execute(add_curso, data_curso)
-                    self.cnx.commit()
-            cursor.close()
+        elif isinstance(item, SemestersItem):
+            self.process_semesters_item(item)
+        else:
+            return item
 
     def process_course_item(self, item):
         """
@@ -112,5 +94,54 @@ class MySQLPipeline(object):
             cursor.execute(add_reqs, data_reqs)
         self.cnx.commit()
 
+    def process_semesters_item(self, item):
+        """
+        Process 'SemestersItem' objects and add data to the tables 'curso' and 'semestres'.
+
+        :param item:  object with 'SemestersItem' data
+        """
+        cursor = self.cnx.cursor()
+        self.add_curso(item, cursor)
+        self.add_semesters(item, cursor)
+        cursor.close()
+
+    def add_curso(self, item, cursor):
+        """
+        Add requirements to table 'curso'.
+
+        :param item:    object with 'SemestersItem' data
+        :param cursor:  mysql cursor
+        """
+        add_curso = (" "
+                     "INSERT INTO curso (idcurso, code, name, year, emphasis, text_electives) "
+                     "VALUES (%s, %s, %s, %s, %s, %s) "
+                     "ON DUPLICATE KEY UPDATE idcurso=VALUES(idcurso), code=VALUES(code), "
+                     "name=VALUES(name), year=VALUES(year), emphasis=VALUES(emphasis), text_electives=VALUES(text_electives)")
+        data_curso = (item['id'], item['code'], item['name'], item['year'], item['emphasis'], item['text_electives'])
+        cursor.execute(add_curso, data_curso)
+        self.cnx.commit()
+
+    def add_semesters(self, item, cursor):
+        """
+        Add requirements to table 'semestres'.
+
+        :param item:    object with 'SemestersItem' data
+        :param cursor:  mysql cursor
+        """
+        add_curso = (" "
+                     "INSERT INTO semestres (ind_semestre, materia, idcurso) "
+                     "VALUES (%s, %s, %s) "
+                     "ON DUPLICATE KEY UPDATE ind_semestre=VALUES(ind_semestre), materia=VALUES(materia), idcurso=VALUES(idcurso)")
+        for s in item['semesters']:
+            for m in item['semesters'][s]['materias']:
+                data_curso = (int(s), m, item['id'])
+                cursor.execute(add_curso, data_curso)
+                self.cnx.commit()
+
     def close_spider(self, spider):
+        """
+        Close the mysql connection when the spider closes
+
+        :param spider: scrapy spider
+        """
         self.cnx.close()
