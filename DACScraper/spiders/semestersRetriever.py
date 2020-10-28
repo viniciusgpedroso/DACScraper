@@ -102,10 +102,10 @@ class SemestersRetrieverSpider(scrapy.Spider):
         num_emphasis = len(emphasis_titles)
         assert len(emphasis_sems) == num_emphasis
 
-        logging.info('emphasis_titles: {}', emphasis_titles)
+        logging.info('emphasis_titles: {}'.format(emphasis_titles))
 
         lst_electives = self.text_electives
-        logging.info("lst_electives" + lst_electives)
+        logging.info("lst_electives: {}".format(lst_electives))
         # Builds an item for each emphasis
         for i in range(num_emphasis):
             item = SemestersItem()

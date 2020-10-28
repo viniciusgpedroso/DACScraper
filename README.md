@@ -60,6 +60,22 @@ The oldest ```first_year``` supported is 2013, and the ```last_year``` is the ye
 The output can be used as input for the ```semestersRetriever``` spider.
 
 
+### semestersRetriever
+
+Spider to retrieve all the 'majors' semesters and add to 'SemestersItem' objects.
+
+How to run:
+```
+crawl semestersRetriever -a filename="samples/semestersRetrieverSample.json" -o .scrapy/outputSemestersRetriever.json
+```
+where the filename must be the location of a json file with an array of objects
+with keys 'year' and 'courses_list', which is a list of valid code courses from that year's catalog, sample:
+```
+[
+{"year": "2020", "courses_list": [34,42]}
+]
+```
+
 ## Pipelines
 
 Currently there is a single pipeline that uses MySQL, there are json and default Feed Exports available native to scrapy
