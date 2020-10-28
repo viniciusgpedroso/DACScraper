@@ -13,9 +13,10 @@ class CoursesListerSpider(scrapy.Spider):
     """
     name = 'coursesLister'
 
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         """
         Reads the urls from the filename
+
         :param filename: location of json file with an 'urls' key and an array of urls.
         """
         logging.info(f"Loading '{filename}'")
@@ -29,6 +30,7 @@ class CoursesListerSpider(scrapy.Spider):
         """
         Starts requests using the urls from 'self.urls' list and obtains the '1st Level' - all div10b urls and callback
         to continue_requests
+
         :return: scrapy.http.requests to be parsed
         """
         for url in self.urls:
@@ -38,8 +40,9 @@ class CoursesListerSpider(scrapy.Spider):
         """
         Start requests for each course code prefix and obtains the '2nd Level' - first div10b url, saves and
         callback to parse
-        :param response:
-        :return:
+
+        :param response:    scrapy.http.response objects
+        :return:            scrapy.http.requests to be parsed
         """
         for relative_url in response.xpath(cnst.XPATH_IDS).getall():
             item = CourseIdURLItem()
@@ -52,8 +55,9 @@ class CoursesListerSpider(scrapy.Spider):
     def parse(self, response):
         """
         Parses the response and yields CourseIdItem objects
-        :param response: scrapy.http.response objects
-        :return: filled CourseIdItem object
+
+        :param response:    scrapy.http.response objects
+        :return:            filled CourseIdItem object
         """
         item = response.meta['item']
         relative_url = response.xpath(cnst.XPATH_IDS).get()
