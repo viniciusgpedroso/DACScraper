@@ -53,7 +53,7 @@ Spider to list all the 'majors' codes and add to 'CourseListItem' objects.
 
 How to run:
 ```
-crawl semestersLister -a first_year="2019" -a last_year="2020" -o ".scrapy/outputSemesterLister.json"
+scrapy crawl semestersLister -a first_year="2019" -a last_year="2020" -o ".scrapy/outputSemesterLister.json"
 ```
 The oldest ```first_year``` supported is 2013, and the ```last_year``` is the year of the last catalog available. 
 
@@ -66,7 +66,7 @@ Spider to retrieve all the 'majors' semesters and add to 'SemestersItem' objects
 
 How to run:
 ```
-crawl semestersRetriever -a filename="samples/semestersRetrieverSample.json" -o .scrapy/outputSemestersRetriever.json
+scrapy crawl semestersRetriever -a filename="samples/semestersRetrieverSample.json" -o .scrapy/outputSemestersRetriever.json
 ```
 where the filename must be the location of a json file with an array of objects
 with keys 'year' and 'courses_list', which is a list of valid code courses from that year's catalog, sample:
