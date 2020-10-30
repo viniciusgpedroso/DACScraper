@@ -138,7 +138,6 @@ class SemestersRetrieverSpider(scrapy.Spider):
         """
         Parses courses electives and adds the data to self.text_electives
 
-        # TODO What to return when the course has no electives?
         :param response:    response from the url of the course with the electives text
         :return:            a filled SemestersItem object
         """
