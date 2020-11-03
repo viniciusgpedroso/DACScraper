@@ -145,3 +145,8 @@ class MySQLPipeline(object):
         :param spider: scrapy spider
         """
         self.cnx.close()
+
+class MongoPipeline(object):
+    """
+    Pipeline to process items and add to a mongo database.
+    """
